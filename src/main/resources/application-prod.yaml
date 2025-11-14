@@ -1,0 +1,223 @@
+#-----------------------------------------------------------------------------------------------
+# ***********  SPRING CONFIGURATION FOR THE APPLICATION IN stage PROFILE ************************
+#-----------------------------------------------------------------------------------------------
+spring:
+  application:
+    name: lpa-redemption-nightlybatch
+  codec:
+    max-in-memory-size: 1024MB
+  mvc:
+    throw-exception-if-no-handler-found: true
+    resources:
+      add-mappings: false
+  config:
+    activate:
+      on-profile: prod
+  security:
+    user:
+      name: admin
+      password: key
+  batch:
+    initialize-schema: always
+    job:
+      enabled: false
+  datasource:
+    tomcat:
+      initial-size: 15
+      max-wait: 20000
+      max-active: 1000
+      max-idle: 150
+      min-idle: 8
+      default-auto-commit: true
+  jpa:
+    hibernate:
+      ddl-auto: update
+  data:
+    mongodb:
+      uri: mongodb://mongodb-replicaset:27017/?replicaSet=mongodb-replicaset
+      database: TFS-CORE-DB
+
+
+#-----------------------------------------------------------------------------------------------
+# TFS PROXY SERVER SETTINGS FOR THE API CALLS
+#-----------------------------------------------------------------------------------------------
+proxy:
+  toyota:
+    host: tfsproxy.tfs.toyota.com
+    port: 9090
+    userName: ${user.name}
+    userPwd: ${pwd}
+
+#-----------------------------------------------------------------------------------------------
+# CRON
+#-----------------------------------------------------------------------------------------------
+cron:
+  time: 0 30 19 * * *
+
+#-----------------------------------------------------------------------------------------------
+# LOGGER CONFIGURATIONS
+#-----------------------------------------------------------------------------------------------
+logging:
+  file:
+    name: logs/application.log
+    max-size: 1024MB
+    max-history: 10
+  pattern:
+    console: "%d [%X{traceId}/%X{spanId}] %C{0} - %m%n"
+    file: "%d [%X{traceId}/%X{spanId}] %C{0} - %m%n"
+    rolling-file-name: ${LOG_FILE}.%d{yyyy-MM-dd}.%i.zip
+  level:
+    root: INFO
+    com.toyota.tfs: INFO
+    org.springframework.web: INFO
+
+
+#-----------------------------------------------------------------------------------------------
+# SERVER PORT CONFIGURATIONS
+#-----------------------------------------------------------------------------------------------
+server:
+  port: 8085
+  error:
+    whitelabel:
+      enabled: false
+  ssl:
+    enabled: false
+    key-alias: lpa-redemption-nightly-job.tfs.toyota.com
+    key-password: csaadmin123
+    key-store: classpath:keystore/keystore.jks
+    key-store-provider: SUN
+    key-store-type: JKS
+    key-store-password: csaadmin123
+
+#---------------------------Common configuration for OKTA, Redis, Mongo -------------------------
+#------------------------------------------------------------------------------------------------
+coresvc:
+  factoryName: CoreService
+  env: prod
+  factoryCode: CL14
+  tokenVersion: V2
+  requestLogger: true
+  auth:
+    enabled: true
+  centrify:
+    enabled: true
+    secretNames: >
+      CL14-TFS-CoreServiceAPI-CI-prod,
+      CL14-TFS-CoreServiceAPI-CS-prod,
+      CL14-MFS-CoreServiceAPI-CI-prod,
+      CL14-MFS-CoreServiceAPI-CS-prod,
+      CL14-BFS-CoreServiceAPI-CI-prod,
+      CL14-BFS-CoreServiceAPI-CS-prod
+    api:
+      host: tfspas.my.centrify.net
+      context:
+        auth: /
+      urls:
+        token: /oauth2/token/coreservice_prod
+        guid: /RedRock/query
+        secretcontent: /ServerManage/RetrieveSecretContents
+  mulesoft:
+    api:
+      host: https://internal-apigateway.toyotafintech.io
+      context:
+        mule: /sys-oauth-provider
+      urls:
+        token: /v2/token
+  apifieldmap:
+    request:
+      authorize:
+        - key: grant_type
+          value: client_credentials
+        - key: client_id
+          value: coreservice_prod@toyota.local
+        - key: client_secret
+          value: Encryption@83 # Need to change the password
+        - key: access_token_url
+          value: https://tfspas.my.centrify.net/oauth2/token/coreservice_prod
+        - key: scope
+          value: coreservice_prod
+
+#-----------------------------------------------------------------------------------------------
+# Database
+#-----------------------------------------------------------------------------------------------
+postgres:
+  datasource:
+    driverClassName: org.postgresql.Driver
+    url: jdbc:postgresql://ppra0372.tfs.toyota.com:2603/ppra0372?currentSchema=lpa
+    username: srv_coreservapi_prd
+    pwd: YrWMELyx8yowDAeqlxWg70Rr7UKBnGC2
+
+db:
+  serviceparameter:
+    supportedtenant: t002,t007
+    lpacontractsearchwindow: lpa_contract_search_window
+    lpaprocesswindow: lpa_process_window
+
+business:
+  grounding:
+    automated:
+      userid: TFSWLI
+#-----------------------------------------------------------------------------------------------
+# URL CONFIGURATIONS
+#-----------------------------------------------------------------------------------------------
+
+api:
+  tfs:
+    # CEP Activities API & CONFIGURATIONS
+    oauth:
+      host: apigateway.toyotafintech.io
+      context: /esg-core-services
+      url: /tokendetails
+
+    ccp:
+      host: apigateway.toyotafintech.io
+      context: /digital-communication-services
+      url: /contacts/v1/attributes/search
+      attr:
+        val1: MarketingOffers.PROGRAM_NAME
+        val2: MarketingOffers.OFFER_NAME
+        val3: MarketingOffers.OFFER_START_DATE
+        val4: MarketingOffers.OFFER_END_DATE
+        val5: MarketingOffers.ACCOUNT_NUMBER
+      item:
+        val: Lease Pull Ahead Program
+
+    defi:
+      host: apigateway.toyotafintech.io
+      context: /defi-services
+      url: /PRDAU_PR01_AAE/V1/SaveLPAWaiverRedemption
+      util:
+        consumerSystemId: AutoLL
+        consumerEnvironmentId: UAT00
+        userId: TFSWLI
+        activityId: 7c159d67-963f-4fa5-b744-28792d06c37f
+
+    sparc:
+      host: apigateway.toyotafintech.io
+      context: /sparc-services
+      url: /pricinglookup/space/v1/lpa/eligibility
+      util:
+        clientId: LpaRedemptionService
+        requestType: LeasePullAheadEligibility
+
+
+#-----------------------------------------------------------------------------------------------
+# Error Messages
+#-----------------------------------------------------------------------------------------------
+
+ERRLPAN001: account not found in account history table
+ERRLPAN002: primary borrower ssn not found in account history table
+ERRLPAN003: ccp api call was failed, system will retry the execution in the next batch
+ERRLPAN004: sparc api call was failed, system will retry the execution in the next batch
+ERRLPAN005: defi api call was failed, system will retry the execution in the next batch
+ERRLPAN006: term expired for LPA redemption check
+ERRLPAN007: disposition fee waiver
+ERRLPAN008: lpa waiver ineligible
+ERRLPAN009: no valid ccp offer
+ERRLPAN010: no new contracts found
+ERRLPAN011: dealer purchase or pass information not available, system will try to retrieve same information from EDP in the next batch cycle
+ERRLPAN012: dealer purchase type not eligible for lpa Payment waiver redemption
+ERRLPAN013: incorrect dealer purchase flag, valid dealer purchase flags are M,P,R or X
+ERRLPAN014: incorrect transportation status, valid transportation status is O
+ERRLPAN015: lpa not eligible for the new account retrieved
+ERRLPAN016: OAuth Token is invalid
